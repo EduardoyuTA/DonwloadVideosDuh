@@ -143,9 +143,44 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+const urlInTextPattern =
+  /(https?:\/\/[^\s<>'"`]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>'"`]*)?)/i;
+const trailingUrlPunctuationPattern = /[.,;:!?\])}]+$/;
+
+function normalizeVideoUrl(value) {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  const match = rawValue.match(urlInTextPattern);
+  let candidate = (match ? match[0] : rawValue)
+    .trim()
+    .replace(trailingUrlPunctuationPattern, "");
+
+  if (candidate.startsWith("//")) {
+    return `https:${candidate}`;
+  }
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return candidate;
+    }
+  } catch {
+    // A proxima etapa tenta tratar links colados sem o protocolo.
+  }
+
+  if (/^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/:?#]|$)/i.test(candidate)) {
+    return `https://${candidate}`;
+  }
+
+  return candidate;
+}
+
 function isValidUrl(value) {
   try {
-    const url = new URL(String(value || "").trim());
+    const url = new URL(normalizeVideoUrl(value));
     return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
@@ -171,7 +206,7 @@ function formatLocalDate(isoDate) {
 function currentPayload() {
   const activeFormat = formatChoiceInput ? formatChoiceInput.value : "mp4";
   return {
-    video_url: videoUrlInput ? videoUrlInput.value.trim() : "",
+    video_url: normalizeVideoUrl(videoUrlInput ? videoUrlInput.value : ""),
     output_dir: !isHostedMode && outputDirInput ? outputDirInput.value.trim() : "",
     format_choice: activeFormat,
     quality_choice: qualitySelect ? qualitySelect.value : "best",
@@ -763,6 +798,10 @@ async function handleDownloadSubmit(event) {
       videoUrlInput.focus();
     }
     return;
+  }
+
+  if (videoUrlInput) {
+    videoUrlInput.value = payload.video_url;
   }
 
   savePreferences();

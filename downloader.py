@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -10,8 +11,11 @@ from time import time
 from pathlib import Path
 from shutil import which
 from typing import Callable
+from urllib.parse import urlparse
 
 import yt_dlp
+
+logger = logging.getLogger(__name__)
 
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 AUDIO_ASSETS_DIR = RESOURCE_DIR / "assets" / "audio"
@@ -167,6 +171,76 @@ PLATFORM_LABELS = {
 
 class DownloadError(Exception):
     """Erro amigavel para exibir na interface."""
+
+
+def is_youtube_url(video_url: str) -> bool:
+    try:
+        hostname = (urlparse(str(video_url or "")).hostname or "").lower()
+    except ValueError:
+        return False
+
+    return hostname == "youtu.be" or hostname.endswith(".youtube.com")
+
+
+def summarize_url_for_log(video_url: str) -> str:
+    try:
+        parsed = urlparse(str(video_url or ""))
+    except ValueError:
+        return "url-invalida"
+
+    host = parsed.hostname or "sem-host"
+    return f"{host}{parsed.path or ''}"
+
+
+def build_yt_dlp_error_message(action: str, video_url: str, exc: Exception) -> str:
+    detail = str(exc or "").strip()
+    normalized_detail = detail.lower()
+    youtube_related = is_youtube_url(video_url) or "youtube" in normalized_detail
+
+    if youtube_related:
+        blocked_markers = (
+            "not a bot",
+            "sign in to confirm",
+            "captcha",
+            "too many requests",
+            "http error 429",
+            "http error 403",
+            "forbidden",
+            "po token",
+        )
+        if any(marker in normalized_detail for marker in blocked_markers):
+            return (
+                f"Nao foi possivel {action} esse link do YouTube no servidor "
+                "publicado. O YouTube pediu uma verificacao ou recusou a leitura "
+                "automatica a partir deste servidor. O link pode estar correto; "
+                "tente novamente mais tarde ou use o app local para links do YouTube."
+            )
+
+        return (
+            f"Nao foi possivel {action} esse link do YouTube no servidor publicado. "
+            "O link pode estar correto, mas o YouTube nao liberou os metadados para "
+            "este servidor agora. Tente novamente mais tarde ou use o app local."
+        )
+
+    if action == "analisar":
+        return (
+            "Nao foi possivel analisar esse link. Verifique se a plataforma permite "
+            "leitura dos metadados."
+        )
+
+    return (
+        "Nao foi possivel baixar esse link. Verifique se a plataforma e o conteudo "
+        "permitem o download."
+    )
+
+
+def log_yt_dlp_failure(action: str, video_url: str, exc: Exception) -> None:
+    logger.warning(
+        "yt-dlp falhou ao %s %s: %s",
+        action,
+        summarize_url_for_log(video_url),
+        exc,
+    )
 
 
 def is_music_format(format_choice: str) -> bool:
@@ -685,9 +759,9 @@ def extract_video_preview(
         with yt_dlp.YoutubeDL(options) as ydl:
             info = ydl.extract_info(video_url, download=False)
     except yt_dlp.utils.DownloadError as exc:
+        log_yt_dlp_failure("analisar", video_url, exc)
         raise DownloadError(
-            "Nao foi possivel analisar esse link. Verifique se a URL esta correta "
-            "e se a plataforma permite leitura dos metadados."
+            build_yt_dlp_error_message("analisar", video_url, exc)
         ) from exc
 
     return build_preview_payload(
@@ -1385,9 +1459,9 @@ def download_video(
             info = ydl.extract_info(video_url, download=True)
             file_path = resolve_file_path(ydl, info, output_dir, format_choice)
     except yt_dlp.utils.DownloadError as exc:
+        log_yt_dlp_failure("baixar", video_url, exc)
         raise DownloadError(
-            "Nao foi possivel baixar esse link. Verifique se a plataforma e o conteudo "
-            "permitem o download e se a URL esta correta."
+            build_yt_dlp_error_message("baixar", video_url, exc)
         ) from exc
 
     title = str(info.get("title") or "Video")

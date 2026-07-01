@@ -3,13 +3,17 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     VIDEOFLOW_HOSTED=1 \
-    PORT=5000
+    PORT=5000 \
+    DENO_INSTALL=/usr/local
 
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+    && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl unzip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://deno.land/install.sh | sh \
+    && deno --version
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt

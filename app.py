@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -88,10 +89,42 @@ def create_history_store() -> HistoryStore | PostgresHistoryStore:
 history_store = create_history_store()
 download_manager = DownloadManager(history_store, reveal_on_complete=not HOSTED_MODE)
 
+URL_IN_TEXT_RE = re.compile(
+    r"(https?://[^\s<>'\"`]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/[^\s<>'\"`]*)?)",
+    re.IGNORECASE,
+)
+TRAILING_URL_PUNCTUATION = ".,;:!?)]}"
+
+
+def normalize_video_url(value: object) -> str:
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return ""
+
+    match = URL_IN_TEXT_RE.search(raw_value)
+    candidate = (match.group(0) if match else raw_value).strip()
+    candidate = candidate.rstrip(TRAILING_URL_PUNCTUATION)
+
+    if candidate.startswith("//"):
+        return f"https:{candidate}"
+
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return candidate
+
+    if parsed.scheme in {"http", "https"}:
+        return candidate
+
+    if re.match(r"^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/:?#]|$)", candidate, re.I):
+        return f"https://{candidate}"
+
+    return candidate
+
 
 def is_valid_url(value: str) -> bool:
     try:
-        parsed = urlparse(value.strip())
+        parsed = urlparse(normalize_video_url(value))
     except ValueError:
         return False
 
@@ -246,7 +279,7 @@ def index() -> str:
 @app.post("/api/preview")
 def api_preview() -> tuple[object, int] | object:
     payload = get_request_payload()
-    video_url = str(payload.get("video_url") or "").strip()
+    video_url = normalize_video_url(payload.get("video_url"))
     format_choice = normalize_choice(payload, "format_choice", "mp4")
     quality_choice = normalize_choice(payload, "quality_choice", "best")
     add_bpm_intro = normalize_flag(payload, "add_bpm_intro")
@@ -279,7 +312,7 @@ def api_preview() -> tuple[object, int] | object:
 @app.post("/api/downloads")
 def api_create_download() -> tuple[object, int] | object:
     payload = get_request_payload()
-    video_url = str(payload.get("video_url") or "").strip()
+    video_url = normalize_video_url(payload.get("video_url"))
     format_choice = normalize_choice(payload, "format_choice", "mp4")
     quality_choice = normalize_choice(payload, "quality_choice", "best")
     add_bpm_intro = normalize_flag(payload, "add_bpm_intro")
@@ -352,7 +385,7 @@ def api_history() -> object:
 @app.post("/download")
 def download() -> tuple[str, int] | str:
     payload = get_request_payload()
-    video_url = str(payload.get("video_url") or "").strip()
+    video_url = normalize_video_url(payload.get("video_url"))
     output_dir_input = str(payload.get("output_dir") or "").strip()
     format_choice = normalize_choice(payload, "format_choice", "mp4")
     quality_choice = normalize_choice(payload, "quality_choice", "best")
