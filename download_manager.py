@@ -80,6 +80,109 @@ class HistoryStore:
             self._write_entries(entries)
 
 
+class PostgresHistoryStore:
+    def __init__(
+        self,
+        database_url: str,
+        *,
+        limit: int = 30,
+        connect_factory: object | None = None,
+    ) -> None:
+        self.database_url = database_url
+        self.limit = limit
+        self.connect_factory = connect_factory
+        self.lock = Lock()
+        self._ensure_schema()
+
+    def _connect(self) -> object:
+        if self.connect_factory is not None:
+            return self.connect_factory(self.database_url)  # type: ignore[misc]
+
+        try:
+            import psycopg
+        except ImportError as exc:  # pragma: no cover - depende do ambiente
+            raise RuntimeError(
+                "DATABASE_URL foi configurado, mas o pacote psycopg nao esta instalado."
+            ) from exc
+
+        return psycopg.connect(self.database_url, autocommit=True)
+
+    def _ensure_schema(self) -> None:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS download_history (
+                        id TEXT PRIMARY KEY,
+                        completed_at TEXT NOT NULL,
+                        payload JSONB NOT NULL,
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                    """
+                )
+
+    def list_entries(self) -> list[dict[str, object]]:
+        with self.lock:
+            with self._connect() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT payload::text
+                        FROM download_history
+                        ORDER BY completed_at DESC, updated_at DESC
+                        LIMIT %s
+                        """,
+                        (self.limit,),
+                    )
+                    rows = cursor.fetchall()
+
+        entries: list[dict[str, object]] = []
+        for row in rows:
+            try:
+                parsed = json.loads(str(row[0]))
+            except (IndexError, TypeError, json.JSONDecodeError):
+                continue
+            if isinstance(parsed, dict):
+                entries.append(parsed)
+
+        return entries
+
+    def add_entry(self, entry: dict[str, object]) -> None:
+        next_entry = dict(entry)
+        entry_id = str(next_entry.get("id") or uuid4().hex[:12])
+        completed_at = str(next_entry.get("completed_at") or now_iso())
+        next_entry["id"] = entry_id
+        next_entry["completed_at"] = completed_at
+        payload = json.dumps(next_entry, ensure_ascii=True)
+
+        with self.lock:
+            with self._connect() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        INSERT INTO download_history (id, completed_at, payload)
+                        VALUES (%s, %s, %s::jsonb)
+                        ON CONFLICT (id) DO UPDATE SET
+                            completed_at = EXCLUDED.completed_at,
+                            payload = EXCLUDED.payload,
+                            updated_at = NOW()
+                        """,
+                        (entry_id, completed_at, payload),
+                    )
+                    cursor.execute(
+                        """
+                        DELETE FROM download_history
+                        WHERE id NOT IN (
+                            SELECT id
+                            FROM download_history
+                            ORDER BY completed_at DESC, updated_at DESC
+                            LIMIT %s
+                        )
+                        """,
+                        (self.limit,),
+                    )
+
+
 class DownloadManager:
     def __init__(
         self,

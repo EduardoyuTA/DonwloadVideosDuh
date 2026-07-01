@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 from flask import Flask, abort, jsonify, render_template, request, send_file, url_for
 
-from download_manager import DownloadManager, HistoryStore
+from download_manager import DownloadManager, HistoryStore, PostgresHistoryStore
 from downloader import (
     DownloadError,
     FORMAT_OPTIONS,
@@ -71,7 +71,21 @@ app = Flask(
     template_folder=str(RESOURCE_DIR / "templates"),
     static_folder=str(RESOURCE_DIR / "static"),
 )
-history_store = HistoryStore(DATA_DIR / "download_history.json")
+
+
+def get_database_url() -> str:
+    return str(os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL") or "").strip()
+
+
+def create_history_store() -> HistoryStore | PostgresHistoryStore:
+    database_url = get_database_url()
+    if database_url:
+        return PostgresHistoryStore(database_url)
+
+    return HistoryStore(DATA_DIR / "download_history.json")
+
+
+history_store = create_history_store()
 download_manager = DownloadManager(history_store, reveal_on_complete=not HOSTED_MODE)
 
 

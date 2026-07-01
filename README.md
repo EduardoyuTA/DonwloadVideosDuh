@@ -13,6 +13,7 @@ Aplicacao local em Python para baixar videos por meio de links.
 - Mantem historico persistente dos downloads concluidos
 - Exporta em MP3 quando o FFmpeg estiver instalado
 - Possui modo online responsivo, com entrega do arquivo pelo navegador
+- Usa Neon/Postgres em producao quando `DATABASE_URL` estiver configurada
 
 ## Uso responsavel
 
@@ -107,6 +108,21 @@ Arquivos incluidos:
 - `render.yaml`: blueprint para Render usando runtime Docker
 - `Procfile`: alternativa para plataformas que leem comando web
 
+### Banco de dados Neon
+
+No modo online, configure uma variavel `DATABASE_URL` com a connection string do
+Neon. O app cria automaticamente a tabela `download_history` no primeiro boot e
+usa o banco para guardar o historico dos downloads concluidos.
+
+Exemplo de formato da connection string:
+
+```text
+postgresql://usuario:senha@host-pooler.regiao.aws.neon.tech/dbname?sslmode=require&channel_binding=require
+```
+
+Se `DATABASE_URL` nao existir, o app volta para o historico local em
+`data/download_history.json`.
+
 ### Rodar como web local
 
 ```powershell
@@ -126,7 +142,8 @@ http://127.0.0.1:5000
 2. No Render, crie um novo Web Service a partir desse repositorio.
 3. Escolha Docker como runtime, ou use o blueprint `render.yaml`.
 4. Confirme que a variavel `VIDEOFLOW_HOSTED` esta com valor `1`.
-5. Depois do deploy, o Render vai gerar uma URL publica `onrender.com`.
+5. Adicione `DATABASE_URL` com a connection string do Neon.
+6. Depois do deploy, o Render vai gerar uma URL publica `onrender.com`.
 
 Observacao: em hospedagens gratuitas, downloads grandes podem demorar ou falhar por
 limites de CPU, memoria, armazenamento temporario ou tempo de execucao.

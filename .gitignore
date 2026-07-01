@@ -9,3 +9,6 @@ data/download_history.json
 data/
 *.log
 *.tmp
+.env
+.env.*
+!.env.example

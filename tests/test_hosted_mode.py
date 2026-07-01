@@ -23,6 +23,18 @@ class HostedModeTests(unittest.TestCase):
 
         self.assertEqual(resolved, app_module.DEFAULT_DOWNLOAD_DIR)
 
+    def test_database_url_selects_postgres_history_store(self) -> None:
+        database_url = "postgresql://user:pass@example.test/db?sslmode=require"
+
+        with (
+            patch.dict(os.environ, {"DATABASE_URL": database_url}),
+            patch.object(app_module, "PostgresHistoryStore") as postgres_store,
+        ):
+            selected_store = app_module.create_history_store()
+
+        postgres_store.assert_called_once_with(database_url)
+        self.assertEqual(selected_store, postgres_store.return_value)
+
     def test_jobs_api_exposes_browser_download_url_for_completed_job(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_file = Path(temp_dir) / "video.mp4"

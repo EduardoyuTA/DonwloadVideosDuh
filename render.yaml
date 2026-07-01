@@ -7,3 +7,5 @@ services:
     envVars:
       - key: VIDEOFLOW_HOSTED
         value: "1"
+      - key: DATABASE_URL
+        sync: false
