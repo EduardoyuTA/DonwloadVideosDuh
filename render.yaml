@@ -7,5 +7,7 @@ services:
     envVars:
       - key: VIDEOFLOW_HOSTED
         value: "1"
+      - key: VIDEOFLOW_YOUTUBE_PLAYER_CLIENTS
+        value: "android_vr"
       - key: DATABASE_URL
         sync: false

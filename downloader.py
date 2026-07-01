@@ -23,6 +23,7 @@ BPM75_INTRO_PATH = AUDIO_ASSETS_DIR / "bpm75_intro.wav"
 TARGET_AUDIO_SAMPLE_RATE = "44100"
 TARGET_AUDIO_CHANNELS = "2"
 INTRO_NORMALIZE_GAIN = 1.08
+DEFAULT_YOUTUBE_PLAYER_CLIENTS = ("android_vr",)
 VIDEO_MIRROR_CRF_BY_QUALITY = {
     "best": "18",
     "2160": "18",
@@ -243,6 +244,38 @@ def log_yt_dlp_failure(action: str, video_url: str, exc: Exception) -> None:
     )
 
 
+def get_youtube_player_clients() -> list[str]:
+    raw_clients = str(os.getenv("VIDEOFLOW_YOUTUBE_PLAYER_CLIENTS") or "").strip()
+    if not raw_clients:
+        return list(DEFAULT_YOUTUBE_PLAYER_CLIENTS)
+
+    if raw_clients.lower() in {"off", "none", "disabled"}:
+        return []
+
+    clients = [item.strip() for item in raw_clients.split(",") if item.strip()]
+    return clients or list(DEFAULT_YOUTUBE_PLAYER_CLIENTS)
+
+
+def apply_youtube_compat_options(options: dict[str, object]) -> None:
+    player_clients = get_youtube_player_clients()
+    if not player_clients:
+        return
+
+    extractor_args = options.get("extractor_args")
+    if not isinstance(extractor_args, dict):
+        extractor_args = {}
+        options["extractor_args"] = extractor_args
+
+    youtube_args = extractor_args.get("youtube")
+    if not isinstance(youtube_args, dict):
+        youtube_args = {}
+        extractor_args["youtube"] = youtube_args
+
+    # Ajuda o yt-dlp em servidores hospedados, onde alguns clientes do YouTube
+    # podem receber desafios ou respostas sem formatos baixaveis.
+    youtube_args["player_client"] = player_clients
+
+
 def is_music_format(format_choice: str) -> bool:
     return format_choice == "mp3"
 
@@ -422,6 +455,7 @@ def build_options(
         "no_warnings": True,
         "outtmpl": template,
     }
+    apply_youtube_compat_options(options)
 
     if format_choice == "mp3":
         if not ffmpeg_available:
@@ -754,6 +788,7 @@ def extract_video_preview(
         "noplaylist": True,
         "skip_download": True,
     }
+    apply_youtube_compat_options(options)
 
     try:
         with yt_dlp.YoutubeDL(options) as ydl:
