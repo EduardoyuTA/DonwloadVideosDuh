@@ -1,0 +1,42 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="34" y1="32" x2="224" y2="226" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E1016" />
+      <stop offset="0.55" stop-color="#0A0C12" />
+      <stop offset="1" stop-color="#050609" />
+    </linearGradient>
+    <linearGradient id="symbol" x1="60" y1="48" x2="188" y2="194" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C8F135" />
+      <stop offset="0.58" stop-color="#8EEC64" />
+      <stop offset="1" stop-color="#4FACFE" />
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(202 52) rotate(135) scale(92)">
+      <stop stop-color="#C8F135" stop-opacity="0.65" />
+      <stop offset="1" stop-color="#C8F135" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(36 214) rotate(45) scale(86)">
+      <stop stop-color="#4FACFE" stop-opacity="0.65" />
+      <stop offset="1" stop-color="#4FACFE" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect x="14" y="14" width="228" height="228" rx="56" fill="url(#bg)" />
+  <rect x="14.5" y="14.5" width="227" height="227" rx="55.5" stroke="#FFFFFF" stroke-opacity="0.08" />
+  <circle cx="202" cy="52" r="92" fill="url(#glowTop)" />
+  <circle cx="36" cy="214" r="86" fill="url(#glowBottom)" />
+  <rect x="34" y="34" width="188" height="188" rx="44" fill="#FFFFFF" fill-opacity="0.04" />
+
+  <path
+    d="M108 43C108 36.3726 113.373 31 120 31C126.627 31 132 36.3726 132 43V120C132 126.627 126.627 132 120 132C113.373 132 108 126.627 108 120V43Z"
+    fill="url(#symbol)"
+  />
+  <path
+    d="M108 67L53 99L67 123L108 99V67Z"
+    fill="url(#symbol)"
+  />
+  <circle cx="144" cy="145" r="39" fill="url(#symbol)" />
+  <circle cx="144" cy="145" r="15" fill="#0B0D12" fill-opacity="0.34" />
+  <path d="M84 133L115 114V152L84 133Z" fill="#FFFFFF" fill-opacity="0.12" />
+  <rect x="112" y="47" width="16" height="42" rx="8" fill="#FFFFFF" fill-opacity="0.16" />
+  <rect x="108" y="109" width="24" height="12" fill="#0B0D12" fill-opacity="0.26" />
+</svg>

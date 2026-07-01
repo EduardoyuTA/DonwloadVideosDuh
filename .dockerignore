@@ -1,0 +1,12 @@
+.git
+.agents
+.venv
+__pycache__
+*.pyc
+build
+build_output
+dist
+downloads
+data
+*.spec
+*.iss

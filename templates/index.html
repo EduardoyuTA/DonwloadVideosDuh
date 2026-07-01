@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VideoFlow | Videos e Musicas</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="{{ url_for('static', filename='videoflow-mark.svg', v=static_version) }}"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+      <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='styles.css', v=static_version) }}"
+      />
+  </head>
+  <body data-hosted-mode="{{ 'true' if hosted_mode else 'false' }}">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <nav>
+      <a href="#downloader" class="logo">
+        <img
+          src="{{ url_for('static', filename='videoflow-mark.svg') }}"
+          alt=""
+          class="logo-mark"
+        />
+        VideoFlow
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features">Recursos</a></li>
+        <li><a href="#how">Como funciona</a></li>
+        <li><a href="#quality">Qualidade</a></li>
+      </ul>
+
+      <a href="#downloader" class="nav-cta">Baixar agora</a>
+    </nav>
+
+    <main>
+      <section class="hero" id="downloader">
+        <div class="hero-badge">
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5" />
+            <path
+              d="M4.5 6l1 1 2-2"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          {% if hosted_mode %}App online para downloads autorizados{% else %}App local para downloads autorizados{% endif %}
+        </div>
+
+        <h1>Baixe <span>videos e musicas</span> com alta qualidade e uma interface premium.</h1>
+        <p>
+          {% if hosted_mode %}
+          Cole o link, escolha formato, resolucao ou bitrate e receba o arquivo
+          pronto pelo proprio navegador, com um fluxo ajustado para celular.
+          {% else %}
+          Cole o link, escolha formato, resolucao ou bitrate e defina a pasta de
+          destino. O app usa o melhor fluxo disponivel para salvar a midia no seu computador.
+          {% endif %}
+        </p>
+
+        <form class="input-card{% if hosted_mode %} hosted-mode{% endif %}" method="post" action="/download" id="download-form">
+          <input
+            type="hidden"
+            name="format_choice"
+            id="formatChoice"
+            value="{{ format_choice }}"
+          />
+
+          <div class="input-row">
+            <div class="url-wrap">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                />
+              </svg>
+
+              <input
+                id="video_url"
+                name="video_url"
+                class="url-input"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value="{{ video_url }}"
+                required
+              />
+
+              <button
+                type="button"
+                class="paste-btn"
+                id="pasteBtn"
+                aria-label="Colar link da area de transferencia"
+              >
+                Colar
+              </button>
+            </div>
+
+            <button type="submit" class="download-btn">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Iniciar download
+            </button>
+          </div>
+
+          <div class="options-row" id="quality">
+            <div class="format-tabs" role="tablist" aria-label="Formato de saida">
+              {% for option in format_options %}
+              <button
+                type="button"
+                class="tab{% if format_choice == option.value %} active{% endif %}"
+                data-format="{{ option.value }}"
+                data-description="{{ option.description }}"
+                aria-pressed="{% if format_choice == option.value %}true{% else %}false{% endif %}"
+              >
+                {{ option.label }}
+              </button>
+              {% endfor %}
+            </div>
+
+            <div class="select-wrap">
+              <label class="sr-only" for="quality_choice">Qualidade da midia</label>
+              <select class="quality-select" id="quality_choice" name="quality_choice">
+                {% for option in quality_options %}
+                <option
+                  value="{{ option.value }}"
+                  data-description="{{ option.description }}"
+                  {% if quality_choice == option.value %}selected{% endif %}
+                >
+                  {{ option.label }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="meta-row">
+            {% if hosted_mode %}
+            <input
+              id="output_dir"
+              name="output_dir"
+              type="hidden"
+              value="{{ default_output_dir }}"
+            />
+
+            <div class="mini-card web-mode-card">
+              <span class="mini-label">Modo online</span>
+              <strong>Download pelo navegador</strong>
+              <p>Quando terminar, use o botao Baixar arquivo na fila ou no historico.</p>
+            </div>
+            {% else %}
+            <div class="field-block">
+              <label for="output_dir">Pasta de destino</label>
+              <input
+                id="output_dir"
+                name="output_dir"
+                class="surface-input"
+                type="text"
+                value="{{ output_dir or default_output_dir }}"
+                placeholder="{{ default_output_dir }}"
+              />
+            </div>
+            {% endif %}
+
+            <div class="mini-card">
+              <span class="mini-label">Modo de qualidade</span>
+              {% if ffmpeg_available %}
+              <strong>FFmpeg detectado</strong>
+              <p>Merge de video e conversao de musica liberados com qualidade mais alta.</p>
+              {% else %}
+              <strong>FFmpeg nao detectado</strong>
+              <p>Algumas plataformas podem limitar a resolucao final e o MP3 precisa do FFmpeg.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="helper-strip">
+            <div class="helper-item">
+              <span class="helper-kicker">Formato</span>
+              <p id="formatHelp">
+                {% for option in format_options %}
+                {% if format_choice == option.value %}{{ option.description }}{% endif %}
+                {% endfor %}
+              </p>
+            </div>
+            <div class="helper-item">
+              <span class="helper-kicker">Qualidade</span>
+              <p id="qualityHelp">
+                {% for option in quality_options %}
+                {% if quality_choice == option.value %}{{ option.description }}{% endif %}
+                {% endfor %}
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="video-option-card"
+            id="videoOptionCard"
+            {% if format_choice == "mp3" %}hidden{% endif %}
+          >
+            <label class="toggle-card" for="mirror_video">
+              <div class="toggle-copy">
+                <span class="helper-kicker">Modo video</span>
+                <strong>Espelhar video</strong>
+                <p>
+                  Aplica um espelhamento horizontal no arquivo final, ideal para
+                  coreografia, treino com reflexo ou referencia visual invertida.
+                </p>
+                <span class="toggle-hint">
+                  Quando ativa, o arquivo final termina com
+                  <strong id="mirrorFileSuffix">_espelhado.{{ format_choice if format_choice != 'mp3' else 'mp4' }}</strong>.
+                </span>
+              </div>
+
+              <div class="toggle-wrap">
+                <input
+                  id="mirror_video"
+                  name="mirror_video"
+                  class="toggle-input"
+                  type="checkbox"
+                  data-available="{% if ffmpeg_available %}true{% else %}false{% endif %}"
+                  {% if mirror_video %}checked{% endif %}
+                  {% if format_choice == "mp3" or not ffmpeg_available %}disabled{% endif %}
+                />
+                <span class="toggle-ui" aria-hidden="true"></span>
+              </div>
+            </label>
+          </div>
+
+          <div
+            class="music-option-card"
+            id="musicOptionCard"
+            {% if format_choice != "mp3" %}hidden{% endif %}
+          >
+            <label class="toggle-card" for="add_bpm_intro">
+              <div class="toggle-copy">
+                <span class="helper-kicker">Modo musica</span>
+                <strong>Adicionar contagem inicial BPM 75</strong>
+                <p>
+                  Insere 4 batidas de referencia antes da musica final, ideal para
+                  danca, ensaio ou competicao. Disponivel apenas para MP3.
+                </p>
+                <span class="toggle-hint">Quando ativa, o arquivo final termina com <strong>_bpm75.mp3</strong>.</span>
+              </div>
+
+              <div class="toggle-wrap">
+                <input
+                  id="add_bpm_intro"
+                  name="add_bpm_intro"
+                  class="toggle-input"
+                  type="checkbox"
+                  {% if add_bpm_intro %}checked{% endif %}
+                  {% if format_choice != "mp3" %}disabled{% endif %}
+                />
+                <span class="toggle-ui" aria-hidden="true"></span>
+              </div>
+            </label>
+          </div>
+        </form>
+
+        <div class="workflow-grid">
+          <section class="preview-panel" id="previewPanel" hidden>
+            <div class="panel-topline">
+              <span class="panel-chip">Preview do link</span>
+              <span class="panel-meta" id="previewPlatform">Aguardando link</span>
+            </div>
+
+            <div class="preview-body">
+              <div class="preview-thumb-shell">
+                <img
+                  src=""
+                  alt="Thumbnail do video"
+                  class="preview-thumb"
+                  id="previewThumb"
+                  hidden
+                />
+                <div class="preview-thumb-fallback" id="previewThumbFallback">
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="preview-copy">
+                <strong id="previewTitle">Cole um link para ver os detalhes antes de baixar.</strong>
+                <p id="previewUploader">Titulo, plataforma, duracao e estimativa de tamanho aparecem aqui.</p>
+
+                <div class="preview-stats">
+                  <span id="previewDuration">--</span>
+                  <span id="previewSelection">--</span>
+                  <span id="previewSize">--</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="live-panel" id="livePanel">
+            <div class="panel-topline">
+              <span class="panel-chip">Fila ativa</span>
+              <span class="panel-meta" id="queueCount">0 downloads ativos</span>
+            </div>
+
+            <div class="panel-heading">
+              <h3>Progresso real do download</h3>
+              <p>Os jobs entram em fila e atualizam velocidade, status e porcentagem em tempo real.</p>
+            </div>
+
+            <div class="jobs-empty" id="jobsEmpty">
+              Nenhum download em andamento. Quando voce iniciar um job, ele aparece aqui.
+            </div>
+
+            <div class="jobs-list" id="jobsList"></div>
+          </section>
+        </div>
+
+        {% if success or notice or error %}
+        <div class="status-stack">
+          {% if success %}
+          <div class="status-card success">
+            <span class="status-tag">Concluido</span>
+            <strong>{{ success }}</strong>
+            <p>Arquivo salvo em: {{ downloaded_file }}</p>
+          </div>
+          {% endif %}
+
+          {% if notice %}
+          <div class="status-card notice">
+            <span class="status-tag">Aviso</span>
+            <strong>A qualidade final pode variar</strong>
+            <p>{{ notice }}</p>
+          </div>
+          {% endif %}
+
+          {% if error %}
+          <div class="status-card error">
+            <span class="status-tag">Erro</span>
+            <strong>{{ error }}</strong>
+            {% if details %}
+            <p>{{ details }}</p>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="platforms">
+          <span>Suporta</span>
+          <div class="platform-tag yt"><div class="dot"></div>YouTube</div>
+          <div class="platform-tag ig"><div class="dot"></div>Instagram</div>
+          <div class="platform-tag tt"><div class="dot"></div>TikTok</div>
+          <div class="platform-tag tw"><div class="dot"></div>Twitter</div>
+          <div class="platform-tag fb"><div class="dot"></div>Facebook</div>
+          <div class="platform-tag vm"><div class="dot"></div>Vimeo</div>
+        </div>
+      </section>
+
+      <section class="stats-section">
+        <div class="stat-card">
+          <div class="stat-num">50+</div>
+          <div class="stat-label">Plataformas suportadas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">4K</div>
+          <div class="stat-label">Preset mais alto no app</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">MP3+</div>
+          <div class="stat-label">Video e musica com presets dedicados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">{% if hosted_mode %}Online{% else %}Local{% endif %}</div>
+          <div class="stat-label">{% if hosted_mode %}Arquivo entregue no navegador{% else %}Arquivos salvos no seu PC{% endif %}</div>
+        </div>
+      </section>
+
+      <section class="history-section" id="history">
+        <div class="section-label">Atividade</div>
+        <h2 class="section-title">Preview, fila e historico.<br /><em>Agora com dados reais do app.</em></h2>
+
+        <div class="history-layout">
+          <article class="history-card">
+            <div class="panel-topline">
+              <span class="panel-chip">Historico</span>
+              <span class="panel-meta">Persistente entre execucoes</span>
+            </div>
+
+            <div class="panel-heading">
+              <h3>Ultimos downloads concluidos</h3>
+              <p>Os downloads finalizados ficam salvos para consulta rapida na proxima vez que voce abrir o app.</p>
+            </div>
+
+            <div class="history-empty" id="historyEmpty">
+              Nenhum download concluido ainda. Quando o primeiro terminar, ele aparece aqui.
+            </div>
+
+            <div class="history-list" id="historyList"></div>
+          </article>
+
+          <article class="history-card build-card">
+            {% if hosted_mode %}
+            <div class="panel-topline">
+              <span class="panel-chip">Deploy</span>
+              <span class="panel-meta">Docker</span>
+            </div>
+
+            <div class="panel-heading">
+              <h3>Pronto para publicar</h3>
+              <p>
+                Esta versao usa modo online, porta configuravel por ambiente e
+                entrega o arquivo final pelo navegador.
+              </p>
+            </div>
+
+            <div class="command-chip">Dockerfile</div>
+            <p class="build-note">
+              Publique em um servico com suporte a Docker e FFmpeg. O app escuta
+              a porta definida em <strong>PORT</strong>.
+            </p>
+            {% else %}
+            <div class="panel-topline">
+              <span class="panel-chip">Windows</span>
+              <span class="panel-meta">Empacotamento</span>
+            </div>
+
+            <div class="panel-heading">
+              <h3>Gerar o .exe do app</h3>
+              <p>
+                O projeto passa a incluir um script de build para empacotar servidor,
+                templates e arquivos estaticos em uma versao desktop.
+              </p>
+            </div>
+
+            <div class="command-chip">gerar_exe.bat</div>
+            <p class="build-note">
+              Quando voce rodar esse script, o executavel sera gerado na pasta
+              <strong>dist</strong> com abertura automatica do navegador local.
+            </p>
+            {% endif %}
+          </article>
+        </div>
+      </section>
+
+      <section class="features-section" id="features">
+        <div class="section-label">Recursos</div>
+        <h2 class="section-title">O mesmo visual forte do mockup.<br /><em>Agora ligado no app real.</em></h2>
+
+        <div class="features-grid">
+          <div class="feat-card">
+            <div class="feat-icon green">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
+            <div class="feat-title">Presets de qualidade real</div>
+            <div class="feat-desc">
+              Escolha maxima disponivel, 4K, 1440p, 1080p, 720p ou 480p sem sair do fluxo principal.
+            </div>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-icon blue">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <div class="feat-title">Fluxo local e direto</div>
+            <div class="feat-desc">
+              Cole o link, escolha a pasta de destino e baixe no seu proprio computador com interface web local.
+            </div>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-icon purple">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+            <div class="feat-title">Containers de maior qualidade</div>
+            <div class="feat-desc">
+              MP4 para compatibilidade, WEBM para streams modernos, MKV para preservar qualidade e MP3 para musica.
+            </div>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-icon red">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8m-4-4v4" />
+              </svg>
+            </div>
+            <div class="feat-title">Interface mais clara</div>
+            <div class="feat-desc">
+              Tabs de formato, seletor de qualidade, status visual e orientacoes sem esconder as opcoes importantes.
+            </div>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-icon green">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <div class="feat-title">Compatibilidade ampla</div>
+            <div class="feat-desc">
+              O motor por tras do app suporta varias plataformas populares de video e redes sociais.
+            </div>
+          </div>
+
+          <div class="feat-card">
+            <div class="feat-icon blue">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+            </div>
+            <div class="feat-title">Base pronta para evoluir</div>
+            <div class="feat-desc">
+              Esse layout ja prepara o terreno para progresso real, historico de downloads e mais automacoes depois.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="steps-section" id="how">
+        <div class="steps-inner">
+          <div class="section-label">Como funciona</div>
+          <h2 class="section-title">Quatro passos.<br /><em>Zero complicacao.</em></h2>
+
+          <div class="steps-grid">
+            <div class="step">
+              <div class="step-num">01</div>
+              <div class="step-title">Cole o link</div>
+              <div class="step-desc">
+                Copie a URL do video e cole no campo principal da interface.
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">02</div>
+              <div class="step-title">Escolha formato</div>
+              <div class="step-desc">
+                Use as tabs para alternar entre video em MP4, WEBM, MKV ou musica em MP3.
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">03</div>
+              <div class="step-title">Defina a qualidade</div>
+              <div class="step-desc">
+                {% if hosted_mode %}
+                Selecione o preset ideal para video ou musica antes de iniciar.
+                {% else %}
+                Selecione o preset ideal e, se quiser, mude a pasta de destino.
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">04</div>
+              <div class="step-title">{% if hosted_mode %}Baixe no navegador{% else %}Baixe localmente{% endif %}</div>
+              <div class="step-desc">
+                {% if hosted_mode %}
+                O backend processa o link e libera o arquivo final para download direto.
+                {% else %}
+                O backend processa o link e devolve o arquivo salvo no seu computador.
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-copy">
+        VideoFlow. Feito para downloads autorizados e {% if hosted_mode %}uso online responsivo{% else %}uso local{% endif %}.
+      </div>
+      <div class="footer-links">
+        <a href="#downloader">Download</a>
+        <a href="#features">Recursos</a>
+        <a href="#how">Como funciona</a>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      <span id="toastMsg"></span>
+    </div>
+
+    <script id="qualityOptionsData" type="application/json">
+      {{ quality_options_by_format | tojson }}
+    </script>
+    <script id="appConfigData" type="application/json">
+      {{ {"hosted_mode": hosted_mode} | tojson }}
+    </script>
+    <script src="{{ url_for('static', filename='app.js', v=static_version) }}"></script>
+  </body>
+</html>

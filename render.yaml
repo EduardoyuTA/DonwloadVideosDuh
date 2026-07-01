@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: videoflow
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: VIDEOFLOW_HOSTED
+        value: "1"

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+downloads/
+build/
+build_output/
+dist/
+data/download_history.json
+data/
+*.log
+*.tmp
