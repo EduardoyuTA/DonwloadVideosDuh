@@ -382,6 +382,12 @@ def api_history() -> object:
     return jsonify({"history": add_download_urls(history_store.list_entries())})
 
 
+@app.delete("/api/history")
+def api_clear_history() -> object:
+    history_store.clear()
+    return jsonify({"history": []})
+
+
 @app.post("/download")
 def download() -> tuple[str, int] | str:
     payload = get_request_payload()

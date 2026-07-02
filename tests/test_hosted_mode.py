@@ -135,6 +135,31 @@ class HostedModeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_data, b"video")
 
+    def test_history_api_can_clear_saved_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            previous_history = app_module.history_store
+            app_module.history_store = manager_module.HistoryStore(
+                Path(temp_dir) / "history.json"
+            )
+            app_module.history_store.add_entry(
+                {
+                    "id": "job123",
+                    "title": "Video antigo",
+                    "completed_at": "2026-07-01T10:00:00",
+                }
+            )
+
+            try:
+                response = app_module.app.test_client().delete("/api/history")
+                payload = response.get_json()
+                remaining_entries = app_module.history_store.list_entries()
+            finally:
+                app_module.history_store = previous_history
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["history"], [])
+        self.assertEqual(remaining_entries, [])
+
 
 class HostedDownloadManagerTests(unittest.TestCase):
     def test_reveal_folder_is_skipped_when_disabled(self) -> None:

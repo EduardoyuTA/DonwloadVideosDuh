@@ -34,6 +34,7 @@ const queueCount = document.getElementById("queueCount");
 
 const historyList = document.getElementById("historyList");
 const historyEmpty = document.getElementById("historyEmpty");
+const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
 const STORAGE_KEY = "videoflow-preferences-v5";
 const TERMINAL_STATUSES = new Set(["completed", "failed"]);
@@ -740,6 +741,10 @@ function renderHistory(entries) {
   if (historyList) {
     historyList.innerHTML = entries.map(renderHistoryItem).join("");
   }
+
+  if (clearHistoryBtn) {
+    clearHistoryBtn.disabled = entries.length === 0;
+  }
 }
 
 async function refreshHistory() {
@@ -748,6 +753,35 @@ async function refreshHistory() {
     renderHistory(Array.isArray(data.history) ? data.history : []);
   } catch {
     // O historico e secundario; falha silenciosa evita ruido excessivo.
+  }
+}
+
+async function handleClearHistory() {
+  if (!clearHistoryBtn || clearHistoryBtn.disabled) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Limpar todo o historico de downloads? Os arquivos baixados nao serao apagados.",
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  clearHistoryBtn.disabled = true;
+  clearHistoryBtn.dataset.originalText = clearHistoryBtn.textContent;
+  clearHistoryBtn.textContent = "Limpando...";
+
+  try {
+    const data = await fetchJson("/api/history", { method: "DELETE" });
+    renderHistory(Array.isArray(data.history) ? data.history : []);
+    showToast("Historico limpo. Os arquivos baixados foram mantidos.");
+  } catch (error) {
+    showToast(error.message);
+    await refreshHistory();
+  } finally {
+    clearHistoryBtn.textContent =
+      clearHistoryBtn.dataset.originalText || "Limpar historico";
   }
 }
 
@@ -910,6 +944,10 @@ if (pasteBtn) {
       showToast("Nao foi possivel acessar a area de transferencia.");
     }
   });
+}
+
+if (clearHistoryBtn) {
+  clearHistoryBtn.addEventListener("click", handleClearHistory);
 }
 
 loadPreferences();

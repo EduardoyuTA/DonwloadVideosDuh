@@ -79,6 +79,10 @@ class HistoryStore:
             entries.insert(0, dict(entry))
             self._write_entries(entries)
 
+    def clear(self) -> None:
+        with self.lock:
+            self._write_entries([])
+
 
 class PostgresHistoryStore:
     def __init__(
@@ -181,6 +185,12 @@ class PostgresHistoryStore:
                         """,
                         (self.limit,),
                     )
+
+    def clear(self) -> None:
+        with self.lock:
+            with self._connect() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM download_history")
 
 
 class DownloadManager:

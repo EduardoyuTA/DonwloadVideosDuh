@@ -754,6 +754,39 @@ footer {
   font-size: 0.78rem;
 }
 
+.history-toolbar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.history-clear-btn {
+  min-height: 32px;
+  border: 1px solid rgba(255, 90, 103, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 90, 103, 0.08);
+  color: var(--error);
+  cursor: pointer;
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.72rem;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.history-clear-btn:hover:not(:disabled) {
+  border-color: rgba(255, 90, 103, 0.36);
+  background: rgba(255, 90, 103, 0.14);
+  color: #ff9aa2;
+}
+
+.history-clear-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .panel-heading {
   margin-bottom: 1rem;
 }

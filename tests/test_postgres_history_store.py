@@ -87,6 +87,24 @@ class PostgresHistoryStoreTests(unittest.TestCase):
         self.assertEqual(entries[0]["id"], "job123")
         self.assertEqual(entries[0]["title"], "Video")
 
+    def test_clear_entries_deletes_download_history_rows(self) -> None:
+        cursor = FakeCursor()
+        store = PostgresHistoryStore(
+            "postgresql://user:pass@example.test/db?sslmode=require",
+            connect_factory=lambda _: FakeConnection(cursor),
+        )
+        cursor.executions.clear()
+
+        store.clear()
+
+        delete_calls = [
+            item
+            for item in cursor.executions
+            if item[0].startswith("DELETE FROM download_history")
+        ]
+        self.assertEqual(len(delete_calls), 1)
+        self.assertEqual(delete_calls[0][1], ())
+
 
 if __name__ == "__main__":
     unittest.main()
