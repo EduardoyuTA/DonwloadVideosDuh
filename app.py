@@ -64,6 +64,7 @@ else:
 
 SUPPORTED_FORMATS = {item["value"] for item in FORMAT_OPTIONS}
 SUPPORTED_DOWNLOAD_MODES = {"online", "youtube"}
+HOSTED_MIRROR_QUALITIES = {"720", "480"}
 SUPPORTED_QUALITIES_BY_FORMAT = {
     format_choice: {item["value"] for item in quality_options}
     for format_choice, quality_options in QUALITY_OPTIONS_BY_FORMAT.items()
@@ -208,6 +209,17 @@ def validate_download_inputs(
     supported_qualities = SUPPORTED_QUALITIES_BY_FORMAT.get(format_choice, set())
     if quality_choice not in supported_qualities:
         return "Escolha uma qualidade suportada."
+
+    if (
+        HOSTED_MODE
+        and mirror_video
+        and format_choice != "mp3"
+        and quality_choice not in HOSTED_MIRROR_QUALITIES
+    ):
+        return (
+            "No modo online, o espelhamento fica estavel apenas em 720p ou 480p. "
+            "Escolha 720p/480p ou use o app local para espelhar em qualidade maior."
+        )
 
     if add_bpm_intro and format_choice != "mp3":
         return "A contagem inicial BPM 75 so esta disponivel para musicas em MP3."

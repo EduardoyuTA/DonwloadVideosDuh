@@ -9,5 +9,11 @@ services:
         value: "1"
       - key: VIDEOFLOW_YOUTUBE_PLAYER_CLIENTS
         value: "android_vr"
+      - key: VIDEOFLOW_DISABLE_HARDWARE_ENCODERS
+        value: "1"
+      - key: VIDEOFLOW_MIRROR_THREADS
+        value: "1"
+      - key: VIDEOFLOW_MIRROR_PRESET
+        value: "ultrafast"
       - key: DATABASE_URL
         sync: false

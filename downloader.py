@@ -42,6 +42,7 @@ VIDEO_MIRROR_NVENC_CQ_BY_QUALITY = {
 }
 VIDEO_MIRROR_PROGRESS_RANGE = (92.0, 99.0)
 STALE_MIRROR_TEMP_MAX_AGE_SECONDS = 60 * 60
+DEFAULT_MIRROR_SOFTWARE_PRESET = "veryfast"
 
 FORMAT_OPTIONS = (
     {
@@ -242,6 +243,33 @@ def log_yt_dlp_failure(action: str, video_url: str, exc: Exception) -> None:
         summarize_url_for_log(video_url),
         exc,
     )
+
+
+def env_flag(name: str) -> bool:
+    return str(os.getenv(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def get_mirror_software_preset() -> str:
+    preset = str(
+        os.getenv("VIDEOFLOW_MIRROR_PRESET") or DEFAULT_MIRROR_SOFTWARE_PRESET
+    ).strip()
+    return preset or DEFAULT_MIRROR_SOFTWARE_PRESET
+
+
+def get_mirror_thread_args() -> list[str]:
+    raw_threads = str(os.getenv("VIDEOFLOW_MIRROR_THREADS") or "").strip()
+    if not raw_threads:
+        return []
+
+    try:
+        thread_count = int(raw_threads)
+    except ValueError:
+        return []
+
+    if thread_count <= 0:
+        return []
+
+    return ["-threads", str(thread_count)]
 
 
 def get_youtube_player_clients() -> list[str]:
@@ -1280,7 +1308,8 @@ def build_mirror_video_commands(
 
     commands: list[tuple[list[str], str]] = []
     available_encoders = list_available_ffmpeg_encoders()
-    if "h264_nvenc" in available_encoders:
+    hardware_encoders_disabled = env_flag("VIDEOFLOW_DISABLE_HARDWARE_ENCODERS")
+    if not hardware_encoders_disabled and "h264_nvenc" in available_encoders:
         nvenc_command = [
             *base_command,
             "-c:v",
@@ -1306,11 +1335,12 @@ def build_mirror_video_commands(
         "-c:v",
         "libx264",
         "-preset",
-        "veryfast",
+        get_mirror_software_preset(),
         "-crf",
         VIDEO_MIRROR_CRF_BY_QUALITY.get(quality_choice, "20"),
         "-pix_fmt",
         "yuv420p",
+        *get_mirror_thread_args(),
         "-c:a",
         "copy",
     ]

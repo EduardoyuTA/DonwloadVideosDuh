@@ -223,6 +223,15 @@ function getModeValidationMessage(payload = currentPayload()) {
     return "O modo Downloads YouTube aceita apenas links do YouTube.";
   }
 
+  if (
+    isHostedMode &&
+    payload.mirror_video &&
+    payload.format_choice !== "mp3" &&
+    !["720", "480"].includes(payload.quality_choice)
+  ) {
+    return "No modo online, o espelhamento fica estavel apenas em 720p ou 480p. Escolha uma dessas qualidades ou use o app local para espelhar em qualidade maior.";
+  }
+
   return "";
 }
 
