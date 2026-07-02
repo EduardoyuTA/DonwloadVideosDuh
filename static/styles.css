@@ -292,6 +292,69 @@ footer {
   box-shadow: 0 0 100px rgba(200, 241, 53, 0.13);
 }
 
+.download-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.15rem;
+}
+
+.mode-tab {
+  min-height: 90px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 1rem;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.mode-tab span,
+.mode-tab small {
+  display: block;
+}
+
+.mode-tab span {
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 0.35rem;
+}
+
+.mode-tab small {
+  color: var(--text-soft);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 300;
+  line-height: 1.35;
+}
+
+.mode-tab:hover {
+  border-color: rgba(200, 241, 53, 0.22);
+  transform: translateY(-1px);
+}
+
+.mode-tab.active {
+  border-color: rgba(200, 241, 53, 0.36);
+  background: linear-gradient(135deg, rgba(200, 241, 53, 0.16), rgba(79, 172, 254, 0.06));
+  box-shadow: 0 18px 45px rgba(200, 241, 53, 0.07);
+}
+
+.mode-alert {
+  margin: -0.25rem 0 1.1rem;
+  border: 1px solid rgba(200, 241, 53, 0.16);
+  border-radius: 14px;
+  background: rgba(200, 241, 53, 0.07);
+  color: var(--text-soft);
+  padding: 0.8rem 0.95rem;
+  text-align: left;
+  font-size: 0.86rem;
+}
+
 .input-row {
   display: flex;
   gap: 10px;
@@ -1558,6 +1621,16 @@ footer {
   .input-card {
     border-radius: 18px;
     padding: 1rem;
+  }
+
+  .download-mode-switch {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .mode-tab {
+    min-height: 78px;
+    padding: 0.85rem;
   }
 
   .input-row {

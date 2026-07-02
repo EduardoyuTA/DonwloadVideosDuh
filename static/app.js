@@ -2,6 +2,9 @@ const toast = document.getElementById("toast");
 const toastMsg = document.getElementById("toastMsg");
 const pasteBtn = document.getElementById("pasteBtn");
 const formatChoiceInput = document.getElementById("formatChoice");
+const downloadModeInput = document.getElementById("downloadMode");
+const modeTabs = document.querySelectorAll(".mode-tab");
+const modeAlert = document.getElementById("modeAlert");
 const formatTabs = document.querySelectorAll(".tab");
 const formatHelp = document.getElementById("formatHelp");
 const qualityHelp = document.getElementById("qualityHelp");
@@ -52,6 +55,7 @@ const appConfig = (() => {
   }
 })();
 const isHostedMode = appConfig.hosted_mode === true;
+const isLocalYoutubeAvailable = appConfig.local_youtube_available === true;
 const qualityOptionsByFormat = (() => {
   if (!qualityOptionsData) {
     return {};
@@ -80,6 +84,7 @@ const state = {
   qualityChoices: { ...defaultQualityChoices },
   addBpmIntro: false,
   mirrorVideo: false,
+  downloadMode: downloadModeInput ? downloadModeInput.value : "online",
 };
 
 function buildRestartRequiredMessage(featureLabel) {
@@ -188,6 +193,58 @@ function isValidUrl(value) {
   }
 }
 
+function getUrlHostname(value) {
+  try {
+    return new URL(normalizeVideoUrl(value)).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isYoutubeUrl(value) {
+  const hostname = getUrlHostname(value);
+  return hostname === "youtu.be" || hostname.endsWith(".youtube.com");
+}
+
+function getModeValidationMessage(payload = currentPayload()) {
+  if (!isValidUrl(payload.video_url)) {
+    return "";
+  }
+
+  if (payload.download_mode === "online" && isYoutubeUrl(payload.video_url)) {
+    return "Modo Online nao baixa links do YouTube. Selecione Downloads YouTube no app local do PC.";
+  }
+
+  if (payload.download_mode === "youtube" && !isLocalYoutubeAvailable) {
+    return "Downloads YouTube precisam do app local rodando no PC. Abra o iniciar_app.bat e use esse modo por la.";
+  }
+
+  if (payload.download_mode === "youtube" && !isYoutubeUrl(payload.video_url)) {
+    return "O modo Downloads YouTube aceita apenas links do YouTube.";
+  }
+
+  return "";
+}
+
+function modeHelperMessage(mode = state.downloadMode) {
+  if (mode === "youtube") {
+    return isLocalYoutubeAvailable
+      ? "Modo YouTube local ativo: o download roda neste PC e entra no historico do app."
+      : "Modo YouTube disponivel apenas no app local do PC. No site online, use links diretos que nao sejam YouTube.";
+  }
+
+  return "Modo Online ativo: use links diretos e plataformas permitidas. YouTube fica separado no modo local.";
+}
+
+function renderModeAlert(message = modeHelperMessage()) {
+  if (!modeAlert) {
+    return;
+  }
+
+  modeAlert.hidden = !message;
+  modeAlert.textContent = message;
+}
+
 function formatLocalDate(isoDate) {
   if (!isoDate) {
     return "--";
@@ -209,6 +266,7 @@ function currentPayload() {
   return {
     video_url: normalizeVideoUrl(videoUrlInput ? videoUrlInput.value : ""),
     output_dir: !isHostedMode && outputDirInput ? outputDirInput.value.trim() : "",
+    download_mode: downloadModeInput ? downloadModeInput.value : state.downloadMode,
     format_choice: activeFormat,
     quality_choice: qualitySelect ? qualitySelect.value : "best",
     mirror_video:
@@ -248,6 +306,7 @@ function getPreviewKey(payload = currentPayload()) {
   return [
     payload.video_url,
     payload.format_choice,
+    payload.download_mode,
     payload.quality_choice,
     payload.mirror_video,
     payload.add_bpm_intro,
@@ -263,6 +322,7 @@ function savePreferences() {
   state.qualityChoices[payload.format_choice] = payload.quality_choice;
   const preferenceData = {
     format_choice: payload.format_choice,
+    download_mode: payload.download_mode,
     quality_choice: payload.quality_choice,
     quality_choices: state.qualityChoices,
     add_bpm_intro: state.addBpmIntro,
@@ -278,12 +338,16 @@ function savePreferences() {
 
 function loadPreferences() {
   if (!window.localStorage) {
+    syncFormatState(formatChoiceInput ? formatChoiceInput.value : "mp4");
+    syncDownloadModeState(state.downloadMode);
     return;
   }
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
+      syncFormatState(formatChoiceInput ? formatChoiceInput.value : "mp4");
+      syncDownloadModeState(state.downloadMode);
       return;
     }
 
@@ -315,6 +379,9 @@ function loadPreferences() {
         mirrorVideoCheckbox.checked = data.mirror_video;
       }
     }
+    if (typeof data.download_mode === "string") {
+      state.downloadMode = data.download_mode;
+    }
 
     const initialFormat =
       typeof data.format_choice === "string"
@@ -332,6 +399,7 @@ function loadPreferences() {
 
     if (typeof data.format_choice === "string") {
       syncFormatState(data.format_choice);
+      syncDownloadModeState(state.downloadMode);
       return;
     }
   } catch {
@@ -339,6 +407,7 @@ function loadPreferences() {
   }
 
   syncFormatState(formatChoiceInput ? formatChoiceInput.value : "mp4");
+  syncDownloadModeState(state.downloadMode);
 }
 
 function setPreviewLoading() {
@@ -451,6 +520,20 @@ async function requestPreview({ force = false, silent = false } = {}) {
     return null;
   }
 
+  const modeMessage = getModeValidationMessage(payload);
+  if (modeMessage) {
+    state.preview = null;
+    state.previewKey = null;
+    renderPreviewError(modeMessage);
+    renderModeAlert(modeMessage);
+    if (!silent) {
+      showToast(modeMessage);
+    }
+    return null;
+  }
+
+  renderModeAlert(modeHelperMessage(payload.download_mode));
+
   const previewKey = getPreviewKey(payload);
   if (!force && state.previewKey === previewKey && state.preview) {
     renderPreview(state.preview);
@@ -494,6 +577,15 @@ function schedulePreview(delay = 700) {
   clearTimeout(state.previewTimer);
   if (!videoUrlInput || !isValidUrl(videoUrlInput.value.trim())) {
     clearPreview();
+    renderModeAlert(modeHelperMessage());
+    return;
+  }
+
+  const payload = currentPayload();
+  const modeMessage = getModeValidationMessage(payload);
+  if (modeMessage) {
+    renderPreviewError(modeMessage);
+    renderModeAlert(modeMessage);
     return;
   }
 
@@ -531,6 +623,23 @@ function syncMusicOptionState(format) {
   }
 
   bpmIntroCheckbox.checked = false;
+}
+
+function syncDownloadModeState(mode) {
+  const normalizedMode = mode === "youtube" ? "youtube" : "online";
+  state.downloadMode = normalizedMode;
+
+  if (downloadModeInput) {
+    downloadModeInput.value = normalizedMode;
+  }
+
+  modeTabs.forEach((tab) => {
+    const isActive = tab.dataset.downloadMode === normalizedMode;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  renderModeAlert(modeHelperMessage(normalizedMode));
 }
 
 function syncVideoOptionState(format) {
@@ -706,6 +815,8 @@ function historyThumbMarkup(entry) {
 }
 
 function renderHistoryItem(entry) {
+  const modeLabel =
+    entry.download_mode === "youtube" ? "YouTube local" : "Online";
   const pathMarkup =
     !isHostedMode && entry.file_path
       ? `<div class="history-path">${escapeHtml(entry.file_path)}</div>`
@@ -720,7 +831,7 @@ function renderHistoryItem(entry) {
         ${historyThumbMarkup(entry)}
         <div class="history-copy">
           <h4 class="history-title">${escapeHtml(entry.title)}</h4>
-          <p class="history-subtitle">${escapeHtml(entry.platform_label || "Link")} - ${escapeHtml(entry.selection_summary || "--")}</p>
+          <p class="history-subtitle">${escapeHtml(entry.platform_label || "Link")} - ${escapeHtml(entry.selection_summary || "--")} - ${escapeHtml(modeLabel)}</p>
           <div class="history-meta">
             <span class="job-pill">${escapeHtml(entry.duration_label || "Duracao indisponivel")}</span>
             <span class="job-pill">${escapeHtml(formatLocalDate(entry.completed_at))}</span>
@@ -838,6 +949,14 @@ async function handleDownloadSubmit(event) {
     videoUrlInput.value = payload.video_url;
   }
 
+  const modeMessage = getModeValidationMessage(payload);
+  if (modeMessage) {
+    renderPreviewError(modeMessage);
+    renderModeAlert(modeMessage);
+    showToast(modeMessage);
+    return;
+  }
+
   savePreferences();
   const preview =
     state.previewKey === getPreviewKey(payload) && state.preview
@@ -876,6 +995,14 @@ async function handleDownloadSubmit(event) {
     }
   }
 }
+
+modeTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    syncDownloadModeState(tab.dataset.downloadMode || "online");
+    savePreferences();
+    schedulePreview(180);
+  });
+});
 
 formatTabs.forEach((tab) => {
   tab.addEventListener("click", () => {

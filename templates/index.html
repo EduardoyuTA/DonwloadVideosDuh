@@ -77,6 +77,42 @@
             id="formatChoice"
             value="{{ format_choice }}"
           />
+          <input
+            type="hidden"
+            name="download_mode"
+            id="downloadMode"
+            value="{{ download_mode }}"
+          />
+
+          <div class="download-mode-switch" aria-label="Modo de download">
+            <button
+              type="button"
+              class="mode-tab{% if download_mode == 'online' %} active{% endif %}"
+              data-download-mode="online"
+              aria-pressed="{% if download_mode == 'online' %}true{% else %}false{% endif %}"
+            >
+              <span>Modo Online</span>
+              <small>Links diretos e plataformas liberadas, sem YouTube.</small>
+            </button>
+
+            <button
+              type="button"
+              class="mode-tab{% if download_mode == 'youtube' %} active{% endif %}"
+              data-download-mode="youtube"
+              aria-pressed="{% if download_mode == 'youtube' %}true{% else %}false{% endif %}"
+            >
+              <span>Downloads YouTube</span>
+              <small>
+                {% if hosted_mode %}
+                Use o app local do PC para baixar YouTube.
+                {% else %}
+                Baixa localmente no PC e salva no historico.
+                {% endif %}
+              </small>
+            </button>
+          </div>
+
+          <div class="mode-alert" id="modeAlert" hidden></div>
 
           <div class="input-row">
             <div class="url-wrap">
@@ -104,7 +140,7 @@
                 name="video_url"
                 class="url-input"
                 type="url"
-                placeholder="https://www.youtube.com/watch?v=..."
+                placeholder="{% if hosted_mode %}https://exemplo.com/video.mp4{% else %}https://www.youtube.com/watch?v=...{% endif %}"
                 value="{{ video_url }}"
                 required
               />
@@ -180,7 +216,7 @@
             <div class="mini-card web-mode-card">
               <span class="mini-label">Modo online</span>
               <strong>Download pelo navegador</strong>
-              <p>Quando terminar, use o botao Baixar arquivo na fila ou no historico.</p>
+              <p>Use links diretos e plataformas liberadas. YouTube fica no modo local do PC.</p>
             </div>
             {% else %}
             <div class="field-block">
@@ -389,7 +425,7 @@
 
         <div class="platforms">
           <span>Suporta</span>
-          <div class="platform-tag yt"><div class="dot"></div>YouTube</div>
+          <div class="platform-tag yt"><div class="dot"></div>{% if hosted_mode %}YouTube local{% else %}YouTube{% endif %}</div>
           <div class="platform-tag ig"><div class="dot"></div>Instagram</div>
           <div class="platform-tag tt"><div class="dot"></div>TikTok</div>
           <div class="platform-tag tw"><div class="dot"></div>Twitter</div>
@@ -720,7 +756,7 @@
       {{ quality_options_by_format | tojson }}
     </script>
     <script id="appConfigData" type="application/json">
-      {{ {"hosted_mode": hosted_mode} | tojson }}
+      {{ {"hosted_mode": hosted_mode, "local_youtube_available": local_youtube_available} | tojson }}
     </script>
     <script src="{{ url_for('static', filename='app.js', v=static_version) }}"></script>
   </body>

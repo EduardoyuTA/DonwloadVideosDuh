@@ -40,7 +40,7 @@ class UrlHandlingTests(unittest.TestCase):
             response = app_module.app.test_client().post(
                 "/api/preview",
                 json={
-                    "video_url": "www.youtube.com/watch?v=jNQXAC9IVRw",
+                    "video_url": "samplelib.com/lib/preview/mp4/sample-5s.mp4",
                     "format_choice": "mp4",
                     "quality_choice": "best",
                 },
@@ -48,7 +48,7 @@ class UrlHandlingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         extract_preview.assert_called_once_with(
-            "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+            "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
             "mp4",
             "best",
             False,

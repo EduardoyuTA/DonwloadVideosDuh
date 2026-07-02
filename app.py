@@ -19,6 +19,7 @@ from downloader import (
     download_video,
     extract_video_preview,
     get_quality_options_for_format,
+    is_youtube_url,
 )
 
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -62,6 +63,7 @@ else:
     RELATIVE_OUTPUT_BASE_DIR = INSTALL_DIR
 
 SUPPORTED_FORMATS = {item["value"] for item in FORMAT_OPTIONS}
+SUPPORTED_DOWNLOAD_MODES = {"online", "youtube"}
 SUPPORTED_QUALITIES_BY_FORMAT = {
     format_choice: {item["value"] for item in quality_options}
     for format_choice, quality_options in QUALITY_OPTIONS_BY_FORMAT.items()
@@ -166,16 +168,39 @@ def normalize_flag(payload: dict[str, object], key: str) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "on", "yes", "sim"}
 
 
+def normalize_download_mode(payload: dict[str, object]) -> str:
+    return normalize_choice(payload, "download_mode", "online")
+
+
 def validate_download_inputs(
     *,
     video_url: str,
     format_choice: str,
     quality_choice: str,
+    download_mode: str = "online",
     add_bpm_intro: bool = False,
     mirror_video: bool = False,
 ) -> str | None:
     if not is_valid_url(video_url):
         return "Informe um link valido com http:// ou https://."
+
+    if download_mode not in SUPPORTED_DOWNLOAD_MODES:
+        return "Escolha um modo de download suportado."
+
+    if download_mode == "online" and is_youtube_url(video_url):
+        return (
+            "Modo Online nao baixa links do YouTube. Use o modo Downloads YouTube "
+            "no app local para baixar esse tipo de link."
+        )
+
+    if download_mode == "youtube":
+        if HOSTED_MODE:
+            return (
+                "Downloads do YouTube precisam ser feitos no app local do PC. "
+                "Abra o iniciar_app.bat e use o modo Downloads YouTube."
+            )
+        if not is_youtube_url(video_url):
+            return "O modo Downloads YouTube aceita apenas links do YouTube."
 
     if format_choice not in SUPPORTED_FORMATS:
         return "Escolha um formato suportado."
@@ -212,6 +237,7 @@ def build_page_context(**overrides: object) -> dict[str, object]:
         "video_url": "",
         "output_dir": str(DEFAULT_DOWNLOAD_DIR),
         "format_choice": "mp4",
+        "download_mode": "online",
         "quality_choice": "best",
         "format_options": FORMAT_OPTIONS,
         "quality_options": get_quality_options_for_format("mp4"),
@@ -220,6 +246,7 @@ def build_page_context(**overrides: object) -> dict[str, object]:
         "add_bpm_intro": False,
         "mirror_video": False,
         "hosted_mode": HOSTED_MODE,
+        "local_youtube_available": not HOSTED_MODE,
         "static_version": static_version,
         "success": None,
         "notice": None,
@@ -230,6 +257,11 @@ def build_page_context(**overrides: object) -> dict[str, object]:
     context.update(overrides)
 
     format_choice = str(context.get("format_choice") or "mp4").strip().lower()
+    download_mode = str(context.get("download_mode") or "online").strip().lower()
+    if download_mode not in SUPPORTED_DOWNLOAD_MODES:
+        context["download_mode"] = "online"
+    else:
+        context["download_mode"] = download_mode
     quality_options = get_quality_options_for_format(format_choice)
     supported_qualities = {item["value"] for item in quality_options}
     if str(context.get("quality_choice") or "") not in supported_qualities:
@@ -280,6 +312,7 @@ def index() -> str:
 def api_preview() -> tuple[object, int] | object:
     payload = get_request_payload()
     video_url = normalize_video_url(payload.get("video_url"))
+    download_mode = normalize_download_mode(payload)
     format_choice = normalize_choice(payload, "format_choice", "mp4")
     quality_choice = normalize_choice(payload, "quality_choice", "best")
     add_bpm_intro = normalize_flag(payload, "add_bpm_intro")
@@ -289,6 +322,7 @@ def api_preview() -> tuple[object, int] | object:
         video_url=video_url,
         format_choice=format_choice,
         quality_choice=quality_choice,
+        download_mode=download_mode,
         add_bpm_intro=add_bpm_intro,
         mirror_video=mirror_video,
     )
@@ -313,6 +347,7 @@ def api_preview() -> tuple[object, int] | object:
 def api_create_download() -> tuple[object, int] | object:
     payload = get_request_payload()
     video_url = normalize_video_url(payload.get("video_url"))
+    download_mode = normalize_download_mode(payload)
     format_choice = normalize_choice(payload, "format_choice", "mp4")
     quality_choice = normalize_choice(payload, "quality_choice", "best")
     add_bpm_intro = normalize_flag(payload, "add_bpm_intro")
@@ -326,6 +361,7 @@ def api_create_download() -> tuple[object, int] | object:
         video_url=video_url,
         format_choice=format_choice,
         quality_choice=quality_choice,
+        download_mode=download_mode,
         add_bpm_intro=add_bpm_intro,
         mirror_video=mirror_video,
     )
@@ -338,6 +374,7 @@ def api_create_download() -> tuple[object, int] | object:
         output_dir=resolved_output_dir,
         format_choice=format_choice,
         quality_choice=quality_choice,
+        download_mode=download_mode,
         add_bpm_intro=add_bpm_intro,
         mirror_video=mirror_video,
         preview=preview,
@@ -392,6 +429,7 @@ def api_clear_history() -> object:
 def download() -> tuple[str, int] | str:
     payload = get_request_payload()
     video_url = normalize_video_url(payload.get("video_url"))
+    download_mode = normalize_download_mode(payload)
     output_dir_input = str(payload.get("output_dir") or "").strip()
     format_choice = normalize_choice(payload, "format_choice", "mp4")
     quality_choice = normalize_choice(payload, "quality_choice", "best")
@@ -403,6 +441,7 @@ def download() -> tuple[str, int] | str:
         output_dir=output_dir_input or str(DEFAULT_DOWNLOAD_DIR),
         format_choice=format_choice,
         quality_choice=quality_choice,
+        download_mode=download_mode,
         add_bpm_intro=add_bpm_intro,
         mirror_video=mirror_video,
     )
@@ -411,6 +450,7 @@ def download() -> tuple[str, int] | str:
         video_url=video_url,
         format_choice=format_choice,
         quality_choice=quality_choice,
+        download_mode=download_mode,
         add_bpm_intro=add_bpm_intro,
         mirror_video=mirror_video,
     )

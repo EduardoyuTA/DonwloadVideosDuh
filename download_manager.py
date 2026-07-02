@@ -219,6 +219,7 @@ class DownloadManager:
         output_dir: Path,
         format_choice: str,
         quality_choice: str,
+        download_mode: str = "online",
         add_bpm_intro: bool = False,
         mirror_video: bool = False,
         preview: dict[str, object] | None = None,
@@ -241,6 +242,7 @@ class DownloadManager:
             "output_dir": str(output_dir),
             "format_choice": format_choice,
             "quality_choice": quality_choice,
+            "download_mode": download_mode,
             "add_bpm_intro": add_bpm_intro,
             "mirror_video": mirror_video,
             "selection_summary": selection_summary,
@@ -405,6 +407,7 @@ class DownloadManager:
             "duration_label": result.get("duration_label") or job.get("duration_label"),
             "selection_summary": str(result["selection_summary"]),
             "notice": result.get("notice"),
+            "download_mode": str(job.get("download_mode") or "online"),
             "completed_at": completed_at,
         }
         self._update_job(job_id, **completed_job)
@@ -423,6 +426,7 @@ class DownloadManager:
                 "completed_at": completed_at,
                 "format_choice": str(job["format_choice"]),
                 "quality_choice": str(job["quality_choice"]),
+                "download_mode": str(job.get("download_mode") or "online"),
                 "add_bpm_intro": bool(job.get("add_bpm_intro")),
                 "mirror_video": bool(job.get("mirror_video")),
             }
